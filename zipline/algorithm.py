@@ -12,6 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+try:
+    # optional cython based OrderedDict
+    from cyordereddict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 from copy import copy
 import operator as op
 import warnings
@@ -32,6 +37,7 @@ from six import (
     itervalues,
     string_types,
     viewkeys,
+    viewvalues,
 )
 
 from zipline._protocol import handle_non_market_minutes
@@ -1915,7 +1921,7 @@ class TradingAlgorithm(object):
         ----------
         asset : Asset
             The asset that this order is for.
-        percent : float
+        target : float
             The desired percentage of the porfolio value to allocate to
             ``asset``. This is specified as a decimal, for example:
             0.50 means 50%.
@@ -1967,6 +1973,36 @@ class TradingAlgorithm(object):
     def _calculate_order_target_percent_amount(self, asset, target):
         target_amount = self._calculate_order_percent_amount(asset, target)
         return self._calculate_order_target_amount(asset, target_amount)
+
+    @api_method
+    @disallowed_in_before_trading_start(OrderInBeforeTradingStart())
+    def batch_order_target_percent(self, weights):
+        """Place orders towards a given portfolio of weights.
+
+        Parameters
+        ----------
+        weights : collections.Mapping[Asset -> float]
+
+        Returns
+        -------
+        order_ids : pd.Series[Asset -> str]
+            The unique identifiers for the orders that were placed.
+
+        See Also
+        --------
+        :func:`zipline.api.order_target_percent`
+        """
+        order_args = OrderedDict()
+        for asset, target in iteritems(weights):
+            if self._can_order_asset(asset):
+                amount = self._calculate_order_target_percent_amount(
+                    asset, target,
+                )
+                amount, style = self._calculate_order(asset, amount)
+                order_args[asset] = (asset, amount, style)
+
+        order_ids = self.blotter.batch_order(viewvalues(order_args))
+        return pd.Series(data=order_ids, index=order_args)
 
     @error_keywords(sid='Keyword argument `sid` is no longer supported for '
                         'get_open_orders. Use `asset` instead.')
