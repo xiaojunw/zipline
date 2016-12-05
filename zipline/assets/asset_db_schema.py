@@ -163,7 +163,7 @@ asset_router = sa.Table(
 )
 
 extra_mappings = sa.Table(
-    'equities',
+    'extra_mappings',
     metadata,
     sa.Column(
         'sid',
