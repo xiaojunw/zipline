@@ -98,9 +98,13 @@ class RollFinder(with_metaclass(ABCMeta, object)):
 
         while session > start and curr is not None:
             front = curr.contract.sid
-            back = curr.next.contract.sid
+            back = rolls[0][0]
+            prev_c = curr.prev
             while session > start:
                 prev = session - freq
+                if prev_c is not None:
+                    if prev < prev_c.contract.auto_close_date:
+                        break
                 if back != self._active_contract(oc, front, back, prev):
                     rolls.insert(0, ((curr >> offset).contract.sid, session))
                     break
@@ -145,9 +149,4 @@ class VolumeRollFinder(RollFinder):
         prev = dt - self.trading_calendar.day
         front_vol = self.session_reader.get_value(front, prev, 'volume')
         back_vol = self.session_reader.get_value(back, prev, 'volume')
-        if back_vol > front_vol:
-            return back
-        else:
-            contract = oc.sid_to_contract[front].contract
-            auto_closed = dt >= contract.auto_close_date
-            return back if auto_closed else front
+        return back if back_vol > front_vol else front
