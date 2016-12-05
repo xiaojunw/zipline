@@ -162,6 +162,22 @@ asset_router = sa.Table(
     sa.Column('asset_type', sa.Text),
 )
 
+extra_mappings = sa.Table(
+    'equities',
+    metadata,
+    sa.Column(
+        'sid',
+        sa.Integer,
+        unique=True,
+        nullable=False,
+        primary_key=True,
+    ),
+    sa.Column('value', sa.Text, nullable=False),
+    sa.Column('mapping_type', sa.Text, nullable=False),
+    sa.Column('start_date', sa.Integer, default=0, nullable=False),
+    sa.Column('end_date', sa.Integer, nullable=False),
+)
+
 version_info = sa.Table(
     'version_info',
     metadata,
